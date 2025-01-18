@@ -129,12 +129,9 @@ HAL_StatusTypeDef MPU_ReadGyroData(struct MPU_Data* data)
 		return status;
 	}
 
-	data->GyroX =
-	  (int16_t)(buff[0] << 8 | buff[1]) / (MPU_ADC_RES / GYRO_RANGE / 2.0) - GYRO_X_STATIC_CALIBRATION;
-	data->GyroY =
-	  (int16_t)(buff[2] << 8 | buff[3]) / (MPU_ADC_RES / GYRO_RANGE / 2.0) - GYRO_Y_STATIC_CALIBRATION;
-	data->GyroZ =
-	  (int16_t)(buff[4] << 8 | buff[5]) / (MPU_ADC_RES / GYRO_RANGE / 2.0) - GYRO_Z_STATIC_CALIBRATION;
+	data->GyroX = (int16_t)(buff[0] << 8 | buff[1]) / (MPU_ADC_RES / GYRO_RANGE / 2.0) - GYRO_X_STATIC_CALIBRATION;
+	data->GyroY = (int16_t)(buff[2] << 8 | buff[3]) / (MPU_ADC_RES / GYRO_RANGE / 2.0) - GYRO_Y_STATIC_CALIBRATION;
+	data->GyroZ = (int16_t)(buff[4] << 8 | buff[5]) / (MPU_ADC_RES / GYRO_RANGE / 2.0) - GYRO_Z_STATIC_CALIBRATION;
 
 	return status;
 }
@@ -182,20 +179,20 @@ HAL_StatusTypeDef MPU_ReadAll(struct MPU_Data* data)
 	}
 
 	data->AccelX =
-			  (int16_t)(_rxBuff[0] << 8 | _rxBuff[1]) / (MPU_ADC_RES / ACCEL_RANGE / 2.0) - ACCEL_X_STATIC_CALIBRATION;
+	  (int16_t)(_rxBuff[0] << 8 | _rxBuff[1]) / (MPU_ADC_RES / ACCEL_RANGE / 2.0) - ACCEL_X_STATIC_CALIBRATION;
 	data->AccelY =
-			  (int16_t)(_rxBuff[2] << 8 | _rxBuff[3]) / (MPU_ADC_RES / ACCEL_RANGE / 2.0) - ACCEL_Y_STATIC_CALIBRATION;
+	  (int16_t)(_rxBuff[2] << 8 | _rxBuff[3]) / (MPU_ADC_RES / ACCEL_RANGE / 2.0) - ACCEL_Y_STATIC_CALIBRATION;
 	data->AccelZ =
-			  (int16_t)(_rxBuff[4] << 8 | _rxBuff[5]) / (MPU_ADC_RES / ACCEL_RANGE / 2.0) - ACCEL_Z_STATIC_CALIBRATION;
+	  (int16_t)(_rxBuff[4] << 8 | _rxBuff[5]) / (MPU_ADC_RES / ACCEL_RANGE / 2.0) - ACCEL_Z_STATIC_CALIBRATION;
 
 	data->Temp = (int16_t)(_rxBuff[6] << 8 | _rxBuff[7]) / 340.0 + 36.43 - TEMPERATURE_STATIC_CALIBRATION;
 
 	data->GyroX =
-			  (int16_t)(_rxBuff[8] << 8 | _rxBuff[9]) / (MPU_ADC_RES / GYRO_RANGE / 2.0) - GYRO_X_STATIC_CALIBRATION;
+	  (int16_t)(_rxBuff[8] << 8 | _rxBuff[9]) / (MPU_ADC_RES / GYRO_RANGE / 2.0) - GYRO_X_STATIC_CALIBRATION;
 	data->GyroY =
-			  (int16_t)(_rxBuff[10] << 8 | _rxBuff[11]) / (MPU_ADC_RES / GYRO_RANGE / 2.0) - GYRO_Y_STATIC_CALIBRATION;
+	  (int16_t)(_rxBuff[10] << 8 | _rxBuff[11]) / (MPU_ADC_RES / GYRO_RANGE / 2.0) - GYRO_Y_STATIC_CALIBRATION;
 	data->GyroZ =
-			  (int16_t)(_rxBuff[12] << 8 | _rxBuff[13]) / (MPU_ADC_RES / GYRO_RANGE / 2.0) - GYRO_Z_STATIC_CALIBRATION;
+	  (int16_t)(_rxBuff[12] << 8 | _rxBuff[13]) / (MPU_ADC_RES / GYRO_RANGE / 2.0) - GYRO_Z_STATIC_CALIBRATION;
 
 	return status;
 }

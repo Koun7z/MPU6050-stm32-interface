@@ -8,18 +8,19 @@
 #ifndef INC_MPU6050_H_
 #define INC_MPU6050_H_
 
-#include <stdbool.h>
 #include "stm32l4xx_hal.h"
+
+#include <stdbool.h>
 
 #define MPU_ADDRESS 0xD0
 
 // I2C timeout when comunicatin in blocking mode
 #define INIT_TIMEOUT 1000
 
-//Measurement range of accelerometer (2, 4, 8 or 16 g)
+// Measurement range of accelerometer (2, 4, 8 or 16 g)
 #define ACCEL_RANGE 8
-//Measurement range of gyroscope (250, 500, 500, 1000 or 2000 deg/s)
-#define GYRO_RANGE  1000
+// Measurement range of gyroscope (250, 500, 500, 1000 or 2000 deg/s)
+#define GYRO_RANGE 1000
 
 // Static zero reference offset for the gyroscope
 #define GYRO_X_STATIC_CALIBRATION 5.2228
