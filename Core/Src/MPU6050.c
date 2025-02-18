@@ -7,6 +7,7 @@
 
 #include "MPU6050.h"
 
+
 #define MPU_ADDRESS 0xD0
 
 #define WHO_AM_I     0x75
@@ -21,34 +22,75 @@
 
 #define MPU_ADC_RES 65536
 
-// I2C timeout when communicating in blocking mode
-#define INIT_TIMEOUT 1000
-
 // Measurement range of accelerometer (2, 4, 8 or 16 g)
 #define ACCEL_RANGE 8
 // Measurement range of gyroscope (250, 500, 500, 1000 or 2000 deg/s)
-#define GYRO_RANGE 1000
+#define GYRO_RANGE 250
+
+// Axis invertion
+#define INVERT_ACCEL_X_AXIS 0
+#define INVERT_ACCEL_Y_AXIS 0
+#define INVERT_ACCEL_Z_AXIS 0
+
+#define INVERT_GYRO_X_AXIS 0
+#define INVERT_GYRO_Y_AXIS 0
+#define INVERT_GYRO_Z_AXIS 0
 
 // Static zero reference offset for the gyroscope
-#define GYRO_X_STATIC_CALIBRATION 5.3728
-#define GYRO_Y_STATIC_CALIBRATION 0.5760
-#define GYRO_Z_STATIC_CALIBRATION -2.0512
+#define GYRO_X_STATIC_CALIBRATION 0.0f
+#define GYRO_Y_STATIC_CALIBRATION 0.0f
+#define GYRO_Z_STATIC_CALIBRATION 0.0f
 
-// Static zero reference offset for the Acceletometer
-#define ACCEL_X_STATIC_CALIBRATION 0.0247
-#define ACCEL_Y_STATIC_CALIBRATION -0.0092
-#define ACCEL_Z_STATIC_CALIBRATION -0.0411
+// Static zero reference offset for the acceletometer
+#define ACCEL_X_STATIC_CALIBRATION 0.0f
+#define ACCEL_Y_STATIC_CALIBRATION 0.0f
+#define ACCEL_Z_STATIC_CALIBRATION 0.0f
 
 // Static zero reference offset for the temerature sensor
 #define TEMPERATURE_STATIC_CALIBRATION 0
+
+// I2C timeout when communicating in blocking mode
+#define INIT_TIMEOUT 1000
+
 
 I2C_HandleTypeDef* _i2c;
 uint8_t _rxBuff[14];
 
 bool _dataRequested = false;
 
-float _gyroOffset[3]  = {0, 0, 0};
-float _accelOffset[3] = {0, 0, 0};
+float _gyroOffset[3]  = {0.0f, 0.0f, 0.0f};
+float _accelOffset[3] = {0.0f, 0.0f, 0.0f};
+
+
+static inline void invertAccelAxis(struct IMU_Data* data)
+{
+#if INVERT_ACCEL_X_AXIS
+	data->AccelX *= -1;
+#endif
+
+#if INVERT_ACCCEL_Y_AXIS
+	data->AccelY *= -1;
+#endif
+
+#if INVERT_ACCEL_Z_AXIS
+	data->AccelZ *= -1;
+#endif
+}
+
+static inline void invertGyroAxis(struct IMU_Data* data)
+{
+#if INVERT_GYRO_X_AXIS
+	data->GyroX *= -1;
+#endif
+
+#if INVERT_GYRO_Y_AXIS
+	data->GyroY *= -1;
+#endif
+
+#if INVERT_GYRO_Z_AXIS
+	data->GyroZ *= -1;
+#endif
+}
 
 bool MPU_Init(I2C_HandleTypeDef* hi2c)
 {
@@ -76,7 +118,7 @@ bool MPU_Init(I2C_HandleTypeDef* hi2c)
 		}
 
 		// External sync + lowpass filter
-		data = 0x5;
+		data = 0;
 		if(HAL_I2C_Mem_Write(_i2c, MPU_ADDRESS, CONFIG, 1, &data, 1, INIT_TIMEOUT))
 		{
 			return false;
@@ -118,7 +160,7 @@ bool MPU_Init(I2C_HandleTypeDef* hi2c)
 	return false;
 }
 
-void MPU_HandleRX(I2C_HandleTypeDef* hi2c)
+void MPU_HandleRX(I2C_HandleTypeDef* hi2c, struct IMU_Data* data)
 {
 	if(hi2c != _i2c || !_dataRequested)
 	{
@@ -127,24 +169,27 @@ void MPU_HandleRX(I2C_HandleTypeDef* hi2c)
 
 	_dataRequested = false;
 
-	MPU_Data.AccelX = (int16_t)(_rxBuff[0] << 8 | _rxBuff[1]) / (MPU_ADC_RES / ACCEL_RANGE / 2.0)
-	                - ACCEL_X_STATIC_CALIBRATION - _accelOffset[0];
-	MPU_Data.AccelY = (int16_t)(_rxBuff[2] << 8 | _rxBuff[3]) / (MPU_ADC_RES / ACCEL_RANGE / 2.0)
-	                - ACCEL_Y_STATIC_CALIBRATION - _accelOffset[1];
-	MPU_Data.AccelZ = (int16_t)(_rxBuff[4] << 8 | _rxBuff[5]) / (MPU_ADC_RES / ACCEL_RANGE / 2.0)
-	                - ACCEL_Z_STATIC_CALIBRATION - _accelOffset[2];
+	data->AccelX = (int16_t)(_rxBuff[0] << 8 | _rxBuff[1]) / (MPU_ADC_RES / ACCEL_RANGE / 2.0f)
+	             - ACCEL_X_STATIC_CALIBRATION - _accelOffset[0];
+	data->AccelY = (int16_t)(_rxBuff[2] << 8 | _rxBuff[3]) / (MPU_ADC_RES / ACCEL_RANGE / 2.0f)
+	             - ACCEL_Y_STATIC_CALIBRATION - _accelOffset[1];
+	data->AccelZ = (int16_t)(_rxBuff[4] << 8 | _rxBuff[5]) / (MPU_ADC_RES / ACCEL_RANGE / 2.0f)
+	             - ACCEL_Z_STATIC_CALIBRATION - _accelOffset[2];
 
-	MPU_Data.Temp = (int16_t)(_rxBuff[6] << 8 | _rxBuff[7]) / 340.0 + 36.43 - TEMPERATURE_STATIC_CALIBRATION;
+	data->Temp = (int16_t)(_rxBuff[6] << 8 | _rxBuff[7]) / 340.0f + 36.43f - TEMPERATURE_STATIC_CALIBRATION;
 
-	MPU_Data.GyroX = (int16_t)(_rxBuff[8] << 8 | _rxBuff[9]) / (MPU_ADC_RES / GYRO_RANGE / 2.0)
-	               - GYRO_X_STATIC_CALIBRATION - _gyroOffset[0];
-	MPU_Data.GyroY = (int16_t)(_rxBuff[10] << 8 | _rxBuff[11]) / (MPU_ADC_RES / GYRO_RANGE / 2.0)
-	               - GYRO_Y_STATIC_CALIBRATION - _gyroOffset[1];
-	MPU_Data.GyroZ = (int16_t)(_rxBuff[12] << 8 | _rxBuff[13]) / (MPU_ADC_RES / GYRO_RANGE / 2.0)
-	               - GYRO_Z_STATIC_CALIBRATION - _gyroOffset[2];
+	data->GyroX = (int16_t)(_rxBuff[8] << 8 | _rxBuff[9]) / (MPU_ADC_RES / GYRO_RANGE / 2.0f)
+	            - GYRO_X_STATIC_CALIBRATION - _gyroOffset[0];
+	data->GyroY = (int16_t)(_rxBuff[10] << 8 | _rxBuff[11]) / (MPU_ADC_RES / GYRO_RANGE / 2.0f)
+	            - GYRO_Y_STATIC_CALIBRATION - _gyroOffset[1];
+	data->GyroZ = (int16_t)(_rxBuff[12] << 8 | _rxBuff[13]) / (MPU_ADC_RES / GYRO_RANGE / 2.0f)
+	            - GYRO_Z_STATIC_CALIBRATION - _gyroOffset[2];
+
+	invertAccelAxis(data);
+	invertGyroAxis(data);
 }
 
-HAL_StatusTypeDef MPU_ReadAllDMA()
+HAL_StatusTypeDef MPU_RequestAllDMA()
 {
 	_dataRequested = true;
 	return HAL_I2C_Mem_Read_DMA(_i2c, MPU_ADDRESS, ACCEL_XOUT_H, 1, _rxBuff, 14);
@@ -160,12 +205,14 @@ HAL_StatusTypeDef MPU_ReadGyroData(struct IMU_Data* data)
 		return status;
 	}
 
-	data->GyroX =
-	  (int16_t)(buff[0] << 8 | buff[1]) / (MPU_ADC_RES / GYRO_RANGE / 2.0) - GYRO_X_STATIC_CALIBRATION - _gyroOffset[0];
-	data->GyroY =
-	  (int16_t)(buff[2] << 8 | buff[3]) / (MPU_ADC_RES / GYRO_RANGE / 2.0) - GYRO_Y_STATIC_CALIBRATION - _gyroOffset[1];
-	data->GyroZ =
-	  (int16_t)(buff[4] << 8 | buff[5]) / (MPU_ADC_RES / GYRO_RANGE / 2.0) - GYRO_Z_STATIC_CALIBRATION - _gyroOffset[2];
+	data->GyroX = (int16_t)(buff[0] << 8 | buff[1]) / (MPU_ADC_RES / GYRO_RANGE / 2.0f) - GYRO_X_STATIC_CALIBRATION
+	            - _gyroOffset[0];
+	data->GyroY = (int16_t)(buff[2] << 8 | buff[3]) / (MPU_ADC_RES / GYRO_RANGE / 2.0f) - GYRO_Y_STATIC_CALIBRATION
+	            - _gyroOffset[1];
+	data->GyroZ = (int16_t)(buff[4] << 8 | buff[5]) / (MPU_ADC_RES / GYRO_RANGE / 2.0f) - GYRO_Z_STATIC_CALIBRATION
+	            - _gyroOffset[2];
+
+	invertGyroAxis(data);
 
 	return status;
 }
@@ -180,12 +227,14 @@ HAL_StatusTypeDef MPU_ReadAccelData(struct IMU_Data* data)
 		return status;
 	}
 
-	data->AccelX = (int16_t)(buff[0] << 8 | buff[1]) / (MPU_ADC_RES / ACCEL_RANGE / 2.0) - ACCEL_X_STATIC_CALIBRATION
+	data->AccelX = (int16_t)(buff[0] << 8 | buff[1]) / (MPU_ADC_RES / ACCEL_RANGE / 2.0f) - ACCEL_X_STATIC_CALIBRATION
 	             - _accelOffset[0];
-	data->AccelY = (int16_t)(buff[2] << 8 | buff[3]) / (MPU_ADC_RES / ACCEL_RANGE / 2.0) - ACCEL_Y_STATIC_CALIBRATION
+	data->AccelY = (int16_t)(buff[2] << 8 | buff[3]) / (MPU_ADC_RES / ACCEL_RANGE / 2.0f) - ACCEL_Y_STATIC_CALIBRATION
 	             - _accelOffset[0];
-	data->AccelZ = (int16_t)(buff[4] << 8 | buff[5]) / (MPU_ADC_RES / ACCEL_RANGE / 2.0) - ACCEL_Z_STATIC_CALIBRATION
+	data->AccelZ = (int16_t)(buff[4] << 8 | buff[5]) / (MPU_ADC_RES / ACCEL_RANGE / 2.0f) - ACCEL_Z_STATIC_CALIBRATION
 	             - _accelOffset[0];
+
+	invertAccelAxis(data);
 
 	return status;
 }
@@ -200,7 +249,7 @@ HAL_StatusTypeDef MPU_ReadTempData(struct IMU_Data* data)
 		return status;
 	}
 
-	data->Temp = (int16_t)(buff[6] << 8 | buff[7]) / 340.0 + 36.43 - TEMPERATURE_STATIC_CALIBRATION;
+	data->Temp = (int16_t)(buff[0] << 8 | buff[1]) / 340.0f + 36.43f - TEMPERATURE_STATIC_CALIBRATION;
 
 	return status;
 }
@@ -215,30 +264,33 @@ HAL_StatusTypeDef MPU_ReadAll(struct IMU_Data* data)
 		return status;
 	}
 
-	data->AccelX = (int16_t)(buff[0] << 8 | buff[1]) / (MPU_ADC_RES / ACCEL_RANGE / 2.0) - ACCEL_X_STATIC_CALIBRATION
+	data->AccelX = (int16_t)(buff[0] << 8 | buff[1]) / (MPU_ADC_RES / ACCEL_RANGE / 2.0f) - ACCEL_X_STATIC_CALIBRATION
 	             - _accelOffset[0];
-	data->AccelY = (int16_t)(buff[2] << 8 | buff[3]) / (MPU_ADC_RES / ACCEL_RANGE / 2.0) - ACCEL_Y_STATIC_CALIBRATION
+	data->AccelY = (int16_t)(buff[2] << 8 | buff[3]) / (MPU_ADC_RES / ACCEL_RANGE / 2.0f) - ACCEL_Y_STATIC_CALIBRATION
 	             - _accelOffset[1];
-	data->AccelZ = (int16_t)(buff[4] << 8 | buff[5]) / (MPU_ADC_RES / ACCEL_RANGE / 2.0) - ACCEL_Z_STATIC_CALIBRATION
+	data->AccelZ = (int16_t)(buff[4] << 8 | buff[5]) / (MPU_ADC_RES / ACCEL_RANGE / 2.0f) - ACCEL_Z_STATIC_CALIBRATION
 	             - _accelOffset[2];
 
-	data->Temp = (int16_t)(_rxBuff[6] << 8 | _rxBuff[7]) / 340.0 + 36.43 - TEMPERATURE_STATIC_CALIBRATION;
+	data->Temp = (int16_t)(_rxBuff[6] << 8 | _rxBuff[7]) / 340.0f + 36.43f - TEMPERATURE_STATIC_CALIBRATION;
 
-	data->GyroX =
-	  (int16_t)(buff[8] << 8 | buff[9]) / (MPU_ADC_RES / GYRO_RANGE / 2.0) - GYRO_X_STATIC_CALIBRATION - _gyroOffset[0];
-	data->GyroY = (int16_t)(buff[10] << 8 | buff[11]) / (MPU_ADC_RES / GYRO_RANGE / 2.0) - GYRO_Y_STATIC_CALIBRATION
+	data->GyroX = (int16_t)(buff[8] << 8 | buff[9]) / (MPU_ADC_RES / GYRO_RANGE / 2.0f) - GYRO_X_STATIC_CALIBRATION
+	            - _gyroOffset[0];
+	data->GyroY = (int16_t)(buff[10] << 8 | buff[11]) / (MPU_ADC_RES / GYRO_RANGE / 2.0f) - GYRO_Y_STATIC_CALIBRATION
 	            - _gyroOffset[1];
-	data->GyroZ = (int16_t)(buff[12] << 8 | buff[13]) / (MPU_ADC_RES / GYRO_RANGE / 2.0) - GYRO_Z_STATIC_CALIBRATION
+	data->GyroZ = (int16_t)(buff[12] << 8 | buff[13]) / (MPU_ADC_RES / GYRO_RANGE / 2.0f) - GYRO_Z_STATIC_CALIBRATION
 	            - _gyroOffset[2];
+
+	invertAccelAxis(data);
+	invertGyroAxis(data);
 
 	return status;
 }
 
-float* MPU_CallibrateGyro(uint32_t t)
+void MPU_CallibrateGyro(uint32_t t)
 {
-	float offsetX  = 0;
-	float offsetY  = 0;
-	float offsetZ  = 0;
+	float offsetX  = 0.0f;
+	float offsetY  = 0.0f;
+	float offsetZ  = 0.0f;
 	uint32_t count = 0;
 
 	struct IMU_Data data;
@@ -255,18 +307,30 @@ float* MPU_CallibrateGyro(uint32_t t)
 		count++;
 	}
 
+#if INVERT_GYRO_X_AXIS
+	_gyroOffset[0] = -offsetX / count;
+#else
 	_gyroOffset[0] = offsetX / count;
-	_gyroOffset[1] = offsetY / count;
-	_gyroOffset[2] = offsetZ / count;
+#endif
 
-	return &_gyroOffset;
+#if INVERT_GYRO_Y_AXIS
+	_gyroOffset[1] = -offsetY / count;
+#else
+	_gyroOffset[1] = offsetY / count;
+#endif
+
+#if INVERT_GYRO_Z_AXIS
+	_gyroOffset[2] = -offsetZ / count;
+#else
+	_gyroOffset[2] = offsetZ / count;
+#endif
 }
 
-float* MPU_CallibrateAccel(uint32_t t)
+void MPU_CallibrateAccel(uint32_t t)
 {
-	float offsetX  = 0;
-	float offsetY  = 0;
-	float offsetZ  = 0;
+	float offsetX  = 0.0f;
+	float offsetY  = 0.0f;
+	float offsetZ  = 0.0f;
 	uint32_t count = 0;
 
 	struct IMU_Data data;
@@ -274,7 +338,7 @@ float* MPU_CallibrateAccel(uint32_t t)
 
 	while(HAL_GetTick() < stop)
 	{
-		MPU_ReadGyroData(&data);
+		MPU_ReadAccelData(&data);
 
 		offsetX += data.AccelX;
 		offsetY += data.AccelY;
@@ -283,9 +347,21 @@ float* MPU_CallibrateAccel(uint32_t t)
 		count++;
 	}
 
-	_accelOffset[0] = offsetX / count;
-	_accelOffset[1] = offsetY / count;
-	_accelOffset[2] = offsetZ / count - 1;
+#if INVERT_ACCEL_X_AXIS
+	_accelOffset[0] = -offsetX / count;
+#else
+	_accelOffset[0] = (offsetX / count);
+#endif
 
-	return &_accelOffset;
+#if INVERT_ACCEL_Y_AXIS
+	_accelOffset[1] = -offsetY / count;
+#else
+	_accelOffset[1] = offsetY / count;
+#endif
+
+#if INVERT_ACCEL_Z_AXIS
+	_accelOffset[2] = -offsetZ / count - 1.0f;
+#else
+	_accelOffset[2] = offsetZ / count - 1.0f;
+#endif
 }
