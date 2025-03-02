@@ -25,7 +25,7 @@
 // Measurement range of accelerometer (2, 4, 8 or 16 g)
 #define ACCEL_RANGE 8
 // Measurement range of gyroscope (250, 500, 500, 1000 or 2000 deg/s)
-#define GYRO_RANGE 250
+#define GYRO_RANGE 1000
 
 // Axis invertion
 #define INVERT_ACCEL_X_AXIS 0
@@ -62,7 +62,7 @@ float _gyroOffset[3]  = {0.0f, 0.0f, 0.0f};
 float _accelOffset[3] = {0.0f, 0.0f, 0.0f};
 
 
-static inline void invertAccelAxis(struct IMU_Data* data)
+static inline void invertAccelAxis(MPU_Data_Instance* data)
 {
 #if INVERT_ACCEL_X_AXIS
 	data->AccelX *= -1;
@@ -77,7 +77,7 @@ static inline void invertAccelAxis(struct IMU_Data* data)
 #endif
 }
 
-static inline void invertGyroAxis(struct IMU_Data* data)
+static inline void invertGyroAxis(MPU_Data_Instance* data)
 {
 #if INVERT_GYRO_X_AXIS
 	data->GyroX *= -1;
@@ -124,30 +124,34 @@ bool MPU_Init(I2C_HandleTypeDef* hi2c)
 			return false;
 		}
 
-		// Gyro range (default 250 deg/d)
-#if GYRO_RANGE == 500
+		// Gyro range
+#if GYRO_RANGE == 250
+		data = 0b00000000;
+#elif GYRO_RANGE == 500
 		data = 0b00001000;
 #elif GYRO_RANGE == 1000
 		data = 0b00010000;
 #elif GYRO_RANGE == 2000
 		data = 0b00011000;
 #else
-		data = 0b00000000;
+#  error "Incorrect gyroscope range value"
 #endif
 		if(HAL_I2C_Mem_Write(_i2c, MPU_ADDRESS, GYRO_CONFIG, 1, &data, 1, INIT_TIMEOUT))
 		{
 			return false;
 		}
 
-		// Accel Range (default 8g)
+		// Accel Range
 #if ACCEL_RANGE == 2
 		data = 0b00000000;
 #elif ACCEL_RANGE == 4
 		data = 0b00001000;
+#elif ACCEL_RANGE == 8
+		data = 0b00010000;
 #elif ACCEL_RANGE == 16
 		data = 0b00011000;
 #else
-		data = 0b00010000;
+#  error "Incorrect accelerometer range value"
 #endif
 		if(HAL_I2C_Mem_Write(_i2c, MPU_ADDRESS, ACCEL_CONFIG, 1, &data, 1, INIT_TIMEOUT))
 		{
@@ -160,7 +164,7 @@ bool MPU_Init(I2C_HandleTypeDef* hi2c)
 	return false;
 }
 
-void MPU_HandleRX(I2C_HandleTypeDef* hi2c, struct IMU_Data* data)
+void MPU_HandleRX(const I2C_HandleTypeDef* hi2c, MPU_Data_Instance* data)
 {
 	if(hi2c != _i2c || !_dataRequested)
 	{
@@ -195,10 +199,11 @@ HAL_StatusTypeDef MPU_RequestAllDMA()
 	return HAL_I2C_Mem_Read_DMA(_i2c, MPU_ADDRESS, ACCEL_XOUT_H, 1, _rxBuff, 14);
 }
 
-HAL_StatusTypeDef MPU_ReadGyroData(struct IMU_Data* data)
+HAL_StatusTypeDef MPU_ReadGyroData(MPU_Data_Instance* data)
 {
 	uint8_t buff[6];
-	HAL_StatusTypeDef status = HAL_I2C_Mem_Read(_i2c, MPU_ADDRESS, GYRO_XOUT_H, 1, (uint8_t*)&buff, 6, INIT_TIMEOUT);
+	const HAL_StatusTypeDef status =
+	  HAL_I2C_Mem_Read(_i2c, MPU_ADDRESS, GYRO_XOUT_H, 1, (uint8_t*)&buff, 6, INIT_TIMEOUT);
 
 	if(status)
 	{
@@ -217,10 +222,11 @@ HAL_StatusTypeDef MPU_ReadGyroData(struct IMU_Data* data)
 	return status;
 }
 
-HAL_StatusTypeDef MPU_ReadAccelData(struct IMU_Data* data)
+HAL_StatusTypeDef MPU_ReadAccelData(MPU_Data_Instance* data)
 {
 	uint8_t buff[6];
-	HAL_StatusTypeDef status = HAL_I2C_Mem_Read(_i2c, MPU_ADDRESS, ACCEL_XOUT_H, 1, (uint8_t*)&buff, 6, INIT_TIMEOUT);
+	const HAL_StatusTypeDef status =
+	  HAL_I2C_Mem_Read(_i2c, MPU_ADDRESS, ACCEL_XOUT_H, 1, (uint8_t*)&buff, 6, INIT_TIMEOUT);
 
 	if(status)
 	{
@@ -239,10 +245,11 @@ HAL_StatusTypeDef MPU_ReadAccelData(struct IMU_Data* data)
 	return status;
 }
 
-HAL_StatusTypeDef MPU_ReadTempData(struct IMU_Data* data)
+HAL_StatusTypeDef MPU_ReadTempData(MPU_Data_Instance* data)
 {
 	uint8_t buff[2];
-	HAL_StatusTypeDef status = HAL_I2C_Mem_Read(_i2c, MPU_ADDRESS, TEMP_OUT_H, 1, (uint8_t*)&buff, 2, INIT_TIMEOUT);
+	const HAL_StatusTypeDef status =
+	  HAL_I2C_Mem_Read(_i2c, MPU_ADDRESS, TEMP_OUT_H, 1, (uint8_t*)&buff, 2, INIT_TIMEOUT);
 
 	if(status)
 	{
@@ -254,10 +261,11 @@ HAL_StatusTypeDef MPU_ReadTempData(struct IMU_Data* data)
 	return status;
 }
 
-HAL_StatusTypeDef MPU_ReadAll(struct IMU_Data* data)
+HAL_StatusTypeDef MPU_ReadAll(MPU_Data_Instance* data)
 {
 	uint8_t buff[14];
-	HAL_StatusTypeDef status = HAL_I2C_Mem_Read(_i2c, MPU_ADDRESS, ACCEL_XOUT_H, 1, (uint8_t*)&buff, 14, INIT_TIMEOUT);
+	const HAL_StatusTypeDef status =
+	  HAL_I2C_Mem_Read(_i2c, MPU_ADDRESS, ACCEL_XOUT_H, 1, (uint8_t*)&buff, 14, INIT_TIMEOUT);
 
 	if(status)
 	{
@@ -286,15 +294,15 @@ HAL_StatusTypeDef MPU_ReadAll(struct IMU_Data* data)
 	return status;
 }
 
-void MPU_CallibrateGyro(uint32_t t)
+void MPU_CalibrateGyro(uint32_t t)
 {
 	float offsetX  = 0.0f;
 	float offsetY  = 0.0f;
 	float offsetZ  = 0.0f;
 	uint32_t count = 0;
 
-	struct IMU_Data data;
-	uint32_t stop = HAL_GetTick() + t;
+	MPU_Data_Instance data;
+	const uint32_t stop = HAL_GetTick() + t;
 
 	while(HAL_GetTick() < stop)
 	{
@@ -310,31 +318,31 @@ void MPU_CallibrateGyro(uint32_t t)
 #if INVERT_GYRO_X_AXIS
 	_gyroOffset[0] = -offsetX / count;
 #else
-	_gyroOffset[0] = offsetX / count;
+	_gyroOffset[0] = offsetX / (float)count;
 #endif
 
 #if INVERT_GYRO_Y_AXIS
 	_gyroOffset[1] = -offsetY / count;
 #else
-	_gyroOffset[1] = offsetY / count;
+	_gyroOffset[1] = offsetY / (float)count;
 #endif
 
 #if INVERT_GYRO_Z_AXIS
 	_gyroOffset[2] = -offsetZ / count;
 #else
-	_gyroOffset[2] = offsetZ / count;
+	_gyroOffset[2] = offsetZ / (float)count;
 #endif
 }
 
-void MPU_CallibrateAccel(uint32_t t)
+void MPU_CalibrateAccel(uint32_t t)
 {
 	float offsetX  = 0.0f;
 	float offsetY  = 0.0f;
 	float offsetZ  = 0.0f;
 	uint32_t count = 0;
 
-	struct IMU_Data data;
-	uint32_t stop = HAL_GetTick() + t;
+	MPU_Data_Instance data;
+	const uint32_t stop = HAL_GetTick() + t;
 
 	while(HAL_GetTick() < stop)
 	{
@@ -350,18 +358,18 @@ void MPU_CallibrateAccel(uint32_t t)
 #if INVERT_ACCEL_X_AXIS
 	_accelOffset[0] = -offsetX / count;
 #else
-	_accelOffset[0] = (offsetX / count);
+	_accelOffset[0] = (offsetX / (float)count);
 #endif
 
 #if INVERT_ACCEL_Y_AXIS
 	_accelOffset[1] = -offsetY / count;
 #else
-	_accelOffset[1] = offsetY / count;
+	_accelOffset[1] = offsetY / (float)count;
 #endif
 
 #if INVERT_ACCEL_Z_AXIS
 	_accelOffset[2] = -offsetZ / count - 1.0f;
 #else
-	_accelOffset[2] = offsetZ / count - 1.0f;
+	_accelOffset[2] = offsetZ / (float)count - 1.0f;
 #endif
 }
