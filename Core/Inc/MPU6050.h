@@ -14,9 +14,11 @@
 
 #include <stdbool.h>
 
+#define MPU_ADDRESS_1 0xD0
+#define MPU_ADDRESS_2 0xD2
 
 /**
- * @brief Data structure holding MPU6050 readings
+ * @brief Data structure holding MPU6050 confing and readings
  */
 typedef struct
 {
@@ -29,7 +31,13 @@ typedef struct
 	float GyroZ;
 
 	float Temp;
-} MPU_Data_Instance;
+
+	float GyroOffset[3];
+	float AccelOffset[3];
+
+	uint8_t MPU_Address;
+	I2C_HandleTypeDef* hi2c;
+} MPU_Instance;
 
 
 /**
@@ -39,14 +47,14 @@ typedef struct
  * 				- true   Initialization succesful
  * 				- flase  Initialization failed
  */
-bool MPU_Init(I2C_HandleTypeDef* hi2c);
+bool MPU_Init(MPU_Instance* mpu, const I2C_HandleTypeDef* hi2c, uint8_t address);
 
 /**
  * @brief       Parse data after reading using DMA
  * @param[in]  *hi2c  i2c handle
  * @param[out] *data  IMU data structure
  */
-void MPU_HandleRX(const I2C_HandleTypeDef* hi2c, MPU_Data_Instance* data);
+void MPU_HandleRX(MPU_Instance* mpu);
 
 /**
  * @brief  	    Read the gyroscope data into passed struct
@@ -57,7 +65,7 @@ void MPU_HandleRX(const I2C_HandleTypeDef* hi2c, MPU_Data_Instance* data);
  *				- HAL_BUSY    = 0x02U
  *			 	- HAL_TIMEOUT = 0x03U
  */
-HAL_StatusTypeDef MPU_ReadGyroData(MPU_Data_Instance* data);
+HAL_StatusTypeDef MPU_ReadGyroData(MPU_Instance* mpu);
 
 /**
  * @brief  		Read the accelerometer data into passed struct
@@ -68,7 +76,7 @@ HAL_StatusTypeDef MPU_ReadGyroData(MPU_Data_Instance* data);
  *				- HAL_BUSY    = 0x02U
  *			 	- HAL_TIMEOUT = 0x03U
  */
-HAL_StatusTypeDef MPU_ReadAccelData(MPU_Data_Instance* data);
+HAL_StatusTypeDef MPU_ReadAccelData(MPU_Instance* mpu);
 
 /**
  * @brief  	    Read the temperature data into passed struct
@@ -79,7 +87,7 @@ HAL_StatusTypeDef MPU_ReadAccelData(MPU_Data_Instance* data);
  *				- HAL_BUSY    = 0x02U
  *			 	- HAL_TIMEOUT = 0x03U
  */
-HAL_StatusTypeDef MPU_ReadTempData(MPU_Data_Instance* data);
+HAL_StatusTypeDef MPU_ReadTempData(MPU_Instance* mpu);
 
 /**
  * @brief       Read all IMU data into passed struct
@@ -90,7 +98,7 @@ HAL_StatusTypeDef MPU_ReadTempData(MPU_Data_Instance* data);
  *				- HAL_BUSY    = 0x02U
  *			 	- HAL_TIMEOUT = 0x03U
  */
-HAL_StatusTypeDef MPU_ReadAll(MPU_Data_Instance* data);
+HAL_StatusTypeDef MPU_ReadAll(MPU_Instance* mpu);
 
 /**
  * @brief   Start reading all data using DMA
@@ -100,20 +108,20 @@ HAL_StatusTypeDef MPU_ReadAll(MPU_Data_Instance* data);
  *		    - HAL_BUSY    = 0x02U
  *			- HAL_TIMEOUT = 0x03U
  */
-HAL_StatusTypeDef MPU_RequestAllDMA();
+HAL_StatusTypeDef MPU_RequestAllDMA(const MPU_Instance* mpu);
 
 /**
  * @brief      Calculates offset from zero by averaging the readings for given time
  * 			   and applies it to all future readings.
  * @param[in]  t  calibration time
  */
-void MPU_CalibrateGyro(uint32_t t);
+void MPU_CalibrateGyro(MPU_Instance* mpu, uint32_t t);
 
 /**
  * @brief      Calculates offset from level position by averaging the readings for given time
  * 			   and applies it to all future readings.
  * @param[in]  t  calibration time
  */
-void MPU_CalibrateAccel(uint32_t t);
+void MPU_CalibrateAccel(MPU_Instance* mpu, uint32_t t);
 
 #endif /* INC_MPU6050_H_ */
