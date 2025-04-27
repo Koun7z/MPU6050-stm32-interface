@@ -22,16 +22,16 @@
 ** 0 -> [deg/s]
 ** 1 -> [rad/s]
 */
-#define GYRO_RAD_OUTPUT 0
+#define GYRO_RAD_OUTPUT 1
 
 // Axis invertion
-#define INVERT_ACCEL_X_AXIS 1
-#define INVERT_ACCEL_Y_AXIS 1
-#define INVERT_ACCEL_Z_AXIS 1
+#define ACCEL_X_AXIS_DIRECTION -1
+#define ACCEL_Y_AXIS_DIRECTION -1
+#define ACCEL_Z_AXIS_DIRECTION -1
 
-#define INVERT_GYRO_X_AXIS 0
-#define INVERT_GYRO_Y_AXIS 0
-#define INVERT_GYRO_Z_AXIS 0
+#define GYRO_X_AXIS_DIRECTION 1
+#define GYRO_Y_AXIS_DIRECTION 1
+#define GYRO_Z_AXIS_DIRECTION 1
 
 // Static zero reference offset for the gyroscope
 #define GYRO_X_STATIC_CALIBRATION 0.0f
