@@ -8,9 +8,7 @@
 #ifndef INC_MPU6050_H_
 #define INC_MPU6050_H_
 
-// Platform dependent include
-// Delete this one and use your own if needed
-#include "stm32f4xx_hal.h"  // <- F411 blackpill used for testing
+#include "MPU_HAL_Include.h"
 
 #include <stdbool.h>
 
@@ -124,4 +122,5 @@ void MPU_CalibrateGyro(MPU_Instance* mpu, uint32_t t);
  */
 void MPU_CalibrateAccel(MPU_Instance* mpu, uint32_t t);
 
+void MPU_CalibrateAll(MPU_Instance* mpu, const uint32_t t);
 #endif /* INC_MPU6050_H_ */

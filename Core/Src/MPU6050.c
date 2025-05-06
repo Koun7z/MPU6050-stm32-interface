@@ -277,9 +277,9 @@ void MPU_CalibrateGyro(MPU_Instance* mpu, uint32_t t)
 		count++;
 	}
 
-	mpu->GyroOffset[0] = -offsetX * GYRO_X_AXIS_DIRECTION / count;
-	mpu->GyroOffset[1] = -offsetY * GYRO_Y_AXIS_DIRECTION / count;
-	mpu->GyroOffset[2] = -offsetZ * GYRO_Z_AXIS_DIRECTION / count;
+	mpu->GyroOffset[0] = offsetX / count;
+	mpu->GyroOffset[1] = offsetY / count;
+	mpu->GyroOffset[2] = offsetZ / count;
 }
 
 void MPU_CalibrateAccel(MPU_Instance* mpu, uint32_t t)
@@ -306,12 +306,12 @@ void MPU_CalibrateAccel(MPU_Instance* mpu, uint32_t t)
 		count++;
 	}
 
-	mpu->AccelOffset[0] = -offsetX * ACCEL_X_AXIS_DIRECTION / count;
-	mpu->AccelOffset[1] = -offsetY * ACCEL_Y_AXIS_DIRECTION / count;
-	mpu->AccelOffset[2] = -offsetZ * ACCEL_Z_AXIS_DIRECTION / count;
+	mpu->AccelOffset[0] = offsetX / count;
+	mpu->AccelOffset[1] = offsetY / count;
+	mpu->AccelOffset[2] = offsetZ / count;
 }
 
-void MPU_CalibrateAll(MPU_Instance* mpu, uint32_t t)
+void MPU_CalibrateAll(MPU_Instance* mpu, const uint32_t t)
 {
 	float acc_offsetX  = 0.0f;
 	float acc_offsetY  = 0.0f;
@@ -330,7 +330,7 @@ void MPU_CalibrateAll(MPU_Instance* mpu, uint32_t t)
 
 	while(HAL_GetTick() < stop)
 	{
-		MPU_ReadAccelData(&data);
+		MPU_ReadAll(&data);
 
 		acc_offsetX += data.AccelX;
 		acc_offsetY += data.AccelY;
@@ -343,12 +343,12 @@ void MPU_CalibrateAll(MPU_Instance* mpu, uint32_t t)
 		count++;
 	}
 
-	mpu->AccelOffset[0] = -acc_offsetX * ACCEL_X_AXIS_DIRECTION / count;
-	mpu->AccelOffset[1] = -acc_offsetY * ACCEL_Y_AXIS_DIRECTION / count;
-	mpu->AccelOffset[2] = -acc_offsetZ * ACCEL_Z_AXIS_DIRECTION / count;
+	mpu->AccelOffset[0] = acc_offsetX / count;
+	mpu->AccelOffset[1] = acc_offsetY / count;
+	mpu->AccelOffset[2] = acc_offsetZ / count;
 
-	mpu->GyroOffset[0] = -gyro_offsetX * GYRO_X_AXIS_DIRECTION / count;
-	mpu->GyroOffset[1] = -gyro_offsetY * GYRO_Y_AXIS_DIRECTION / count;
-	mpu->GyroOffset[2] = -gyro_offsetZ * GYRO_Z_AXIS_DIRECTION / count;
+	mpu->GyroOffset[0] = gyro_offsetX / count;
+	mpu->GyroOffset[1] = gyro_offsetY / count;
+	mpu->GyroOffset[2] = gyro_offsetZ / count;
 }
 
